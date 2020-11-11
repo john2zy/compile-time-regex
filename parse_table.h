@@ -1,17 +1,17 @@
 // Grammar:
 // S -> E $  $ - the special EOF symbol
 
-// E ->  ch mod seq alt
+// E ->  character mod seq alt
 // E -> ( alt0 ) mod seq alt
 // E -> epsilon
 
-// seq0 -> ch mod seq
+// seq0 -> character mod seq
 // seq0 -> ( alt0 ) mod seq
 // seq -> ( alt0 ) mod seq
-// seq -> ch mod seq
+// seq -> character mod seq
 // seq -> epsilon
 
-// alt0 -> ch mod seq alt
+// alt0 -> character mod seq alt
 // alt0 -> ( alt0 ) mod seq alt
 // alt -> | seq0 alt
 // alt -> epsilon
@@ -26,18 +26,55 @@
 
 #include "stack.h"
 
-template <char C>
-struct ch {};
-
-struct epsilon {};
-
-// operations
+// parser operations
 struct reject {};
 struct accept {};
 struct pass {};
 struct pop_input {};
 
+// terminal wrapper
+template <char C>
+struct character {};
+
+struct epsilon {};
+
+// AST action base type
+struct AST_action {};
+
+//
+// AST types
+//
+
+// single char
+template <char C>
+struct ch {};
+
+// |
+template <typename T1, typename T2>
+struct alter {};
+
+// cdot
+template <typename T1, typename T2>
+struct concat {};
+
+// *
+template <typename T>
+struct star {};
+
+// +
+template <typename T>
+using plus = concat<T, star<T>>;
+
+// ?
+template <typename T>
+using opt = alter<epsilon, T>;
+
+//
+//
+//
+
 struct parse_table {
+    // non-terminals
     struct E {};
     struct alt0 {};
     struct alt {};
@@ -49,102 +86,119 @@ struct parse_table {
     using S = E;
 
     //
-    // parse table entries
+    // AST actions
+    //
+
+    struct _char : AST_action {};
+    struct _concat : AST_action {};
+    struct _alt : AST_action {};
+    struct _star : AST_action {};
+    struct _plus : AST_action {};
+    struct _opt : AST_action {};
+
+    //
+    // AST builder
+    //
+
+    static auto build_AST() -> stack<plus<ch<'a'>>>;
+
+    //
+    // the parse table
     //
 
     //////
     // if the same terminal, then pop 1 input char
     // poping is handled by the parser itself
     template <char C>
-    static auto f(ch<C>, ch<C>) -> pop_input;
+    static auto f(character<C>, character<C>) -> pop_input;
 
     //////
     // E
-    static auto f(E, ch<'('>) -> stack<ch<'('>, alt0, ch<')'>, mod, seq, alt>;
+    static auto f(E, character<'('>) -> stack<character<'('>, alt0, character<')'>, mod, seq, alt>;
 
     template <char C>
-    static auto f(E, ch<C>) -> stack<ch<C>, mod, seq, alt>;
+    static auto f(E, character<C>) -> stack<character<C>, _char, mod, seq, alt>;
 
     static auto f(E, epsilon) -> pass;
 
-    static auto f(E, ch<')'>) -> reject;
-    static auto f(E, ch<'*'>) -> reject;
-    static auto f(E, ch<'+'>) -> reject;
-    static auto f(E, ch<'?'>) -> reject;
-    static auto f(E, ch<'|'>) -> reject;
+    static auto f(E, character<')'>) -> reject;
+    static auto f(E, character<'*'>) -> reject;
+    static auto f(E, character<'+'>) -> reject;
+    static auto f(E, character<'?'>) -> reject;
+    static auto f(E, character<'|'>) -> reject;
 
     //////
     // alt0
-    static auto f(alt0, ch<'('>) -> stack<ch<'('>, alt0, ch<')'>, mod, seq, alt>;
+    static auto f(alt0, character<'('>) -> stack<character<'('>, alt0, character<')'>, mod, seq, alt>;
 
     template <char C>
-    static auto f(alt0, ch<C>) -> stack<ch<C>, mod, seq, alt>;
+    static auto f(alt0, character<C>) -> stack<character<C>, _char, mod, seq, alt>;
 
-    static auto f(alt0, ch<')'>) -> reject;
-    static auto f(alt0, ch<'*'>) -> reject;
-    static auto f(alt0, ch<'+'>) -> reject;
-    static auto f(alt0, ch<'?'>) -> reject;
-    static auto f(alt0, ch<'|'>) -> reject;
+    static auto f(alt0, character<')'>) -> reject;
+    static auto f(alt0, character<'*'>) -> reject;
+    static auto f(alt0, character<'+'>) -> reject;
+    static auto f(alt0, character<'?'>) -> reject;
+    static auto f(alt0, character<'|'>) -> reject;
     static auto f(alt0, epsilon) -> reject;
 
     //////
     // alt
-    static auto f(alt, ch<'|'>) -> stack<ch<'|'>, seq0, alt>;
+    static auto f(alt, character<'|'>) -> stack<character<'|'>, seq0, _alt, alt>;
 
-    static auto f(alt, ch<')'>) -> pass;
+    static auto f(alt, character<')'>) -> pass;
     static auto f(alt, epsilon) -> pass;
 
-    static auto f(alt, ch<'('>) -> reject;
-    static auto f(alt, ch<'*'>) -> reject;
-    static auto f(alt, ch<'+'>) -> reject;
-    static auto f(alt, ch<'?'>) -> reject;
+    static auto f(alt, character<'('>) -> reject;
+    static auto f(alt, character<'*'>) -> reject;
+    static auto f(alt, character<'+'>) -> reject;
+    static auto f(alt, character<'?'>) -> reject;
 
     template <char C>
-    static auto f(alt, ch<C>) -> reject;
+    static auto f(alt, character<C>) -> reject;
 
     //////
     // mod
-    static auto f(mod, ch<'+'>) -> stack<ch<'+'>>;
-    static auto f(mod, ch<'?'>) -> stack<ch<'?'>>;
-    static auto f(mod, ch<'*'>) -> stack<ch<'*'>>;
+    static auto f(mod, character<'+'>) -> stack<character<'+'>, _plus>;
+    static auto f(mod, character<'?'>) -> stack<character<'?'>, _opt>;
+    static auto f(mod, character<'*'>) -> stack<character<'*'>, _star>;
 
-    static auto f(mod, ch<'('>) -> pass;
-    static auto f(mod, ch<')'>) -> pass;
-    static auto f(mod, ch<'|'>) -> pass;
+    static auto f(mod, character<'('>) -> pass;
+    static auto f(mod, character<')'>) -> pass;
+    static auto f(mod, character<'|'>) -> pass;
 
     template <char C>
-    static auto f(mod, ch<C>) -> pass;
+    static auto f(mod, character<C>) -> pass;
 
     static auto f(mod, epsilon) -> pass;
 
     //////
     // seq0
-    static auto f(seq0, ch<'('>) -> stack<ch<'('>, alt0, ch<')'>, mod, seq>;
+    static auto f(seq0, character<'('>) -> stack<character<'('>, alt0, character<')'>, mod, seq>;
 
     template <char C>
-    static auto f(seq0, ch<C>) -> stack<ch<C>, mod, seq>;
+    static auto f(seq0, character<C>) -> stack<character<C>, _char, mod, seq>;
 
-    static auto f(seq0, ch<')'>) -> reject;
-    static auto f(seq0, ch<'*'>) -> reject;
-    static auto f(seq0, ch<'+'>) -> reject;
-    static auto f(seq0, ch<'?'>) -> reject;
-    static auto f(seq0, ch<'|'>) -> reject;
+    static auto f(seq0, character<')'>) -> reject;
+    static auto f(seq0, character<'*'>) -> reject;
+    static auto f(seq0, character<'+'>) -> reject;
+    static auto f(seq0, character<'?'>) -> reject;
+    static auto f(seq0, character<'|'>) -> reject;
     static auto f(seq0, epsilon) -> reject;
 
     //////
     // seq
-    static auto f(seq, ch<'('>) -> stack<ch<'('>, alt0, ch<')'>, mod, seq>;
+    static auto f(seq, character<'('>) -> stack<character<'('>, alt0, character<')'>, mod, _concat, seq>;
 
-    static auto f(seq, ch<')'>) -> pass;
-    static auto f(seq, ch<'|'>) -> pass;
+    static auto f(seq, character<')'>) -> pass;
+    static auto f(seq, character<'|'>) -> pass;
     static auto f(seq, epsilon) -> pass;
 
     template <char C>
-    static auto f(seq, ch<C>) -> stack<ch<C>, mod, seq>;
+    static auto f(seq, character<C>) -> stack<character<C>, _char, mod, _concat, seq>;
 
-    static auto f(seq, ch<'*'>) -> reject;
-    static auto f(seq, ch<'+'>) -> reject;
-    static auto f(seq, ch<'?'>) -> reject;
+    static auto f(seq, character<'*'>) -> reject;
+    static auto f(seq, character<'+'>) -> reject;
+    static auto f(seq, character<'?'>) -> reject;
 
     //////
     // accept & reject

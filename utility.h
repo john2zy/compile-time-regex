@@ -1,19 +1,8 @@
 #ifndef CTRE_UTILITY_H
 #define CTRE_UTILITY_H
 
-template <typename T1, typename T2>
-struct is_same_t {
-    enum {
-        result = 0
-    };
-};
-
-template <typename T>
-struct is_same_t<T, T> {
-    enum {
-        result = 1
-    };
-};
+#include <type_traits>
+#include <utility>
 
 //  just call it on the varible you want to print
 //  and use grep to grab the error meassages:
