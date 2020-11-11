@@ -60,19 +60,32 @@ struct parse_table {
 
     //////
     // E
-    static auto f(E, ch<')'>) -> stack<ch<'('>, alt0, ch<')'>, mod, seq, alt>;
+    static auto f(E, ch<'('>) -> stack<ch<'('>, alt0, ch<')'>, mod, seq, alt>;
 
     template <char C>
     static auto f(E, ch<C>) -> stack<ch<C>, mod, seq, alt>;
 
     static auto f(E, epsilon) -> pass;
 
+    static auto f(E, ch<')'>) -> reject;
+    static auto f(E, ch<'*'>) -> reject;
+    static auto f(E, ch<'+'>) -> reject;
+    static auto f(E, ch<'?'>) -> reject;
+    static auto f(E, ch<'|'>) -> reject;
+
     //////
     // alt0
-    static auto f(alt0, ch<')'>) -> stack<ch<'('>, alt0, ch<')'>, mod, seq, alt>;
+    static auto f(alt0, ch<'('>) -> stack<ch<'('>, alt0, ch<')'>, mod, seq, alt>;
 
     template <char C>
     static auto f(alt0, ch<C>) -> stack<ch<C>, mod, seq, alt>;
+
+    static auto f(alt0, ch<')'>) -> reject;
+    static auto f(alt0, ch<'*'>) -> reject;
+    static auto f(alt0, ch<'+'>) -> reject;
+    static auto f(alt0, ch<'?'>) -> reject;
+    static auto f(alt0, ch<'|'>) -> reject;
+    static auto f(alt0, epsilon) -> reject;
 
     //////
     // alt
@@ -80,6 +93,14 @@ struct parse_table {
 
     static auto f(alt, ch<')'>) -> pass;
     static auto f(alt, epsilon) -> pass;
+
+    static auto f(alt, ch<'('>) -> reject;
+    static auto f(alt, ch<'*'>) -> reject;
+    static auto f(alt, ch<'+'>) -> reject;
+    static auto f(alt, ch<'?'>) -> reject;
+
+    template <char C>
+    static auto f(alt, ch<C>) -> reject;
 
     //////
     // mod
@@ -103,6 +124,13 @@ struct parse_table {
     template <char C>
     static auto f(seq0, ch<C>) -> stack<ch<C>, mod, seq>;
 
+    static auto f(seq0, ch<')'>) -> reject;
+    static auto f(seq0, ch<'*'>) -> reject;
+    static auto f(seq0, ch<'+'>) -> reject;
+    static auto f(seq0, ch<'?'>) -> reject;
+    static auto f(seq0, ch<'|'>) -> reject;
+    static auto f(seq0, epsilon) -> reject;
+
     //////
     // seq
     static auto f(seq, ch<'('>) -> stack<ch<'('>, alt0, ch<')'>, mod, seq>;
@@ -113,6 +141,10 @@ struct parse_table {
 
     template <char C>
     static auto f(seq, ch<C>) -> stack<ch<C>, mod, seq>;
+
+    static auto f(seq, ch<'*'>) -> reject;
+    static auto f(seq, ch<'+'>) -> reject;
+    static auto f(seq, ch<'?'>) -> reject;
 
     //////
     // accept & reject

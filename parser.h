@@ -4,16 +4,17 @@
 #include "fixed_string.h"
 #include "parse_table.h"
 #include "stack.h"
+#include "utility.h"
 
 template <auto& fstr, typename Grammar>
-struct parser {
-    // starting symbol
-    using S = typename Grammar::S;
-
+class parser {
+  public:
     static constexpr bool result = parser::parse(stack<S>{});
 
-    //
-    //
+  private:
+    // starting symbol
+    using S = typename Grammar::S;
+    
     // We need to add an EOF symbol to the end of the input string.
     // It is ok to use epsilon as EOF.
     template <int IDX>
@@ -33,6 +34,9 @@ struct parser {
         // we can use f(arg1, arg2) directly. But I'm too
         // lazy to copy that many lines.
         auto op = decltype(Grammar::f(top(st), fstr_at<IDX>())){};
+        // ctprint(st);
+        // ctprint(fstr_at<IDX>());
+        // ctprint(op);
 
         return next_op<IDX>(op, pop(st));
     }
