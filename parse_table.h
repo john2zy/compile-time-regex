@@ -50,11 +50,11 @@ template <char C>
 struct ch {};
 
 // |
-template <typename T1, typename T2>
+template <typename... Ts>
 struct alter {};
 
 // cdot
-template <typename T1, typename T2>
+template <typename... Ts>
 struct concat {};
 
 // *
@@ -89,9 +89,9 @@ struct parse_table {
     // AST actions
     //
 
-    struct _char : AST_action {};
+    struct _char : AST_action {};  // push char
     struct _concat : AST_action {};
-    struct _alt : AST_action {};
+    struct _alter : AST_action {};
     struct _star : AST_action {};
     struct _plus : AST_action {};
     struct _opt : AST_action {};
@@ -100,7 +100,29 @@ struct parse_table {
     // AST builder
     //
 
-    static auto build_AST() -> stack<plus<ch<'a'>>>;
+    template <char C, typename... Ts>
+    static auto build_AST(_char, character<C> _pre_char, stack<Ts...> _ast) -> stack<ch<C>, Ts...>;
+
+    template <char C, typename T1, typename T2, typename... Ts>
+    static auto build_AST(_concat, character<C>, stack<T1, T2, Ts...>) -> stack<concat<T2, T1>, Ts...>;
+
+    template <char C, typename T, typename... Ts1, typename... Ts2>
+    static auto build_AST(_concat, character<C>, stack<T, concat<Ts1...>, Ts2...>) -> stack<concat<Ts1..., T>, Ts2...>;
+
+    template <char C, typename T1, typename T2, typename... Ts>
+    static auto build_AST(_alter, character<C>, stack<T1, T2, Ts...>) -> stack<alter<T2, T1>, Ts...>;
+
+    template <char C, typename T, typename... Ts1, typename... Ts2>
+    static auto build_AST(_alter, character<C>, stack<T, alter<Ts1...>, Ts2...>) -> stack<alter<Ts1..., T>, Ts2...>;
+
+    template <char C, typename T, typename... Ts>
+    static auto build_AST(_star, character<C>, stack<T, Ts...>) -> stack<star<T>, Ts...>;
+
+    template <char C, typename T, typename... Ts>
+    static auto build_AST(_plus, character<C>, stack<T, Ts...>) -> stack<plus<T>, Ts...>;
+
+    template <char C, typename T, typename... Ts>
+    static auto build_AST(_opt, character<C>, stack<T, Ts...>) -> stack<opt<T>, Ts...>;
 
     //
     // the parse table
@@ -143,7 +165,7 @@ struct parse_table {
 
     //////
     // alt
-    static auto f(alt, character<'|'>) -> stack<character<'|'>, seq0, _alt, alt>;
+    static auto f(alt, character<'|'>) -> stack<character<'|'>, seq0, _alter, alt>;
 
     static auto f(alt, character<')'>) -> pass;
     static auto f(alt, epsilon) -> pass;

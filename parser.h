@@ -38,7 +38,7 @@ class parser {
         auto symbol = top(st);
 
         if constexpr (is_AST_action(symbol)) {
-            auto new_ast = decltype(Grammar::build_AST()){};
+            auto new_ast = decltype(Grammar::build_AST(symbol, fstr_at<IDX - 1>(), ast)){};
 
             return parse<IDX>(pop(st), new_ast);
         } else {
@@ -86,7 +86,9 @@ class parser {
     static constexpr auto result = parser::parse(stack<S>{}, stack<>{});
 
     static constexpr auto correct = result.first;
-    static constexpr auto AST     = result.second;
+    
+    // AST type is wrapped by stack
+    using AST = decltype(result.second);
 };
 
 #endif
