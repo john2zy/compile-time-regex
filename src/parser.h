@@ -82,13 +82,12 @@ class parser {
     // starting symbol
     using S = typename Grammar::S;
 
-  public:
     static constexpr auto result = parser::parse(stack<S>{}, stack<>{});
 
+  public:
     static constexpr auto correct = result.first;
-    
-    // AST type is wrapped by stack
-    using AST = decltype(result.second);
+
+    using AST = decltype(top(result.second));
 };
 
 #endif
