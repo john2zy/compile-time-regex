@@ -14,11 +14,7 @@ struct transition {
     constexpr transition(int src = -1, int dst = -1, char c = '\0')
         : src(src), dst(dst), char_to_match(c), is_epsilon(c == '\0') {}
 
-    //
-    // runtime funtions
-    //
-
-    bool match(char c) const {
+    constexpr bool match(char c) const {
         return c == char_to_match;
     }
 
@@ -82,13 +78,9 @@ class finite_automata {
             });
     }
 
-    //
-    // runtime funtions
-    //
-
     // Since transitions are sorted, we can search for next
     // state from lower bound idx. Find that idx here.
-    int lower_idx_of_src(int src) const {
+    constexpr int lower_idx_of_src(int src) const {
         int left = 0, right = N_T - 1;
         while (left <= right) {
             int         mid = (left + right) / 2;
@@ -109,7 +101,7 @@ class finite_automata {
         return false;
     }
 
-    bool is_final_state(int fs) const {
+    constexpr bool is_final_state(int fs) const {
         int left = 0, right = N_FS - 1;
         while (left <= right) {
             int mid = (left + right) / 2;
@@ -150,7 +142,6 @@ static constexpr finite_automata<1, 1> FA_char{ { { { 0, 1, C } } }, { 1 } };
 // FA connector
 //
 
-// lhs --eps--> rhs
 template <auto& LHS, auto& RHS, auto&... FAs>
 struct FA_concat {
     template <int N_T1, int N_FS1, int N_T2, int N_FS2>
@@ -163,7 +154,7 @@ struct FA_concat {
             res.add_transition(t);
         }
 
-        // increament seq number and copy rhs's transitions
+        // copy rhs's transitions
         for (transition t : rhs.transitions) {
             t.src += l_st_cnt;
             t.dst += l_st_cnt;
@@ -192,39 +183,34 @@ struct FA_concat {
     static constexpr auto res = f(LHS, RHS, FAs...);
 };
 
-// o --eps--> lhs
-//  |--eps--> rhs
 template <auto& LHS, auto& RHS, auto&... FAs>
 struct FA_alter {
     template <int N_T1, int N_FS1, int N_T2, int N_FS2>
     static constexpr auto f(const finite_automata<N_T1, N_FS1>& lhs, const finite_automata<N_T2, N_FS2>& rhs) {
-        finite_automata<N_T1 + N_T2 + 2, N_FS1 + N_FS2> res;
-        int                                             l_st_cnt = lhs.state_count();
+        finite_automata<N_T1 + N_T2, N_FS1 + N_FS2> res;
+        int                                         l_st_cnt = lhs.state_count();
 
         // copy lhs's transitions
         for (transition t : lhs.transitions) {
-            t.src += 1;
-            t.dst += 1;
             res.add_transition(t);
         }
 
-        // increament seq number and copy rhs's transitions
+        // copy rhs's transitions and merge starting states
         for (transition t : rhs.transitions) {
-            t.src += l_st_cnt + 1;
-            t.dst += l_st_cnt + 1;
+            if (t.src != 0)
+                t.src += l_st_cnt - 1;
+            if (t.dst != 0)
+                t.dst += l_st_cnt - 1;
+
             res.add_transition(t);
         }
-
-        // start state
-        res.add_transition({ 0, 1 });
-        res.add_transition({ 0, l_st_cnt + 1 });
 
         // copy final states
         for (int fs : lhs.final_states) {
-            res.add_final_state(fs + 1);
+            res.add_final_state(fs);
         }
         for (int fs : rhs.final_states) {
-            res.add_final_state(fs + l_st_cnt + 1);
+            res.add_final_state(fs + l_st_cnt - 1);
         }
 
         res.sort();
@@ -239,8 +225,6 @@ struct FA_alter {
     static constexpr auto res = f(LHS, RHS, FAs...);
 };
 
-// fa --->
-// <-eps-|
 template <auto& FA>
 struct FA_star {
     template <int N_T, int N_FS>
