@@ -141,7 +141,6 @@ class finite_automata {
 // Basic FAs
 //
 
-static constexpr finite_automata<0, 0> FA_empty{};
 static constexpr finite_automata<0, 1> FA_epsilon{ {}, { 0 } };
 
 template <char C>
@@ -152,8 +151,8 @@ static constexpr finite_automata<1, 1> FA_char{ { { { 0, 1, C } } }, { 1 } };
 //
 
 // lhs --eps--> rhs
-template <auto& LHS, auto& RHS>
-struct concat_FA {
+template <auto& LHS, auto& RHS, auto&... FAs>
+struct FA_concat {
     template <int N_T1, int N_FS1, int N_T2, int N_FS2>
     static constexpr auto f(const finite_automata<N_T1, N_FS1>& lhs, const finite_automata<N_T2, N_FS2>& rhs) {
         finite_automata<N_T1 + N_T2 + N_FS1, N_FS2> res;
@@ -185,13 +184,18 @@ struct concat_FA {
         return res;
     }
 
-    static constexpr auto res = f(LHS, RHS);
+    template <typename T1, typename T2, typename... Ts>
+    static constexpr auto f(T1 t1, T2 t2, Ts... ts) {
+        return f(f(t1, t2), ts...);
+    }
+
+    static constexpr auto res = f(LHS, RHS, FAs...);
 };
 
 // o --eps--> lhs
 //  |--eps--> rhs
-template <auto& LHS, auto& RHS>
-struct alter_FA {
+template <auto& LHS, auto& RHS, auto&... FAs>
+struct FA_alter {
     template <int N_T1, int N_FS1, int N_T2, int N_FS2>
     static constexpr auto f(const finite_automata<N_T1, N_FS1>& lhs, const finite_automata<N_T2, N_FS2>& rhs) {
         finite_automata<N_T1 + N_T2 + 2, N_FS1 + N_FS2> res;
@@ -227,18 +231,23 @@ struct alter_FA {
         return res;
     }
 
-    static constexpr auto res = f(LHS, RHS);
+    template <typename T1, typename T2, typename... Ts>
+    static constexpr auto f(T1 t1, T2 t2, Ts... ts) {
+        return f(f(t1, t2), ts...);
+    }
+
+    static constexpr auto res = f(LHS, RHS, FAs...);
 };
 
 // fa --->
 // <-eps-|
 template <auto& FA>
-struct star_FA {
+struct FA_star {
     template <int N_T, int N_FS>
     static constexpr auto f(const finite_automata<N_T, N_FS>& fa) {
         finite_automata<N_T + N_FS, N_FS> res;
 
-        for (transition& t : fa.transitions) {
+        for (transition t : fa.transitions) {
             res.add_transition(t);
         }
 
@@ -257,7 +266,28 @@ struct star_FA {
 // FA builder
 //
 
+template <typename... Ts>
+constexpr auto& build_FA(concat<Ts...>) {
+    return FA_concat<build_FA(Ts{})...>::res;
+}
+
+template <typename... Ts>
+constexpr auto& build_FA(alter<Ts...>) {
+    return FA_alter<build_FA(Ts{})...>::res;
+}
+
 template <typename T>
-auto build_FA() -> void;
+constexpr auto& build_FA(star<T>) {
+    return FA_star<build_FA(T{})>::res;
+}
+
+template <char C>
+constexpr auto& build_FA(ch<C>) {
+    return FA_char<C>;
+}
+
+constexpr auto& build_FA(epsilon) {
+    return FA_epsilon;
+}
 
 #endif
