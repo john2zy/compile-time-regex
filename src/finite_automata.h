@@ -26,6 +26,9 @@ struct transition {
     }
 };
 
+// Stores 2 sorted int arrays as FA representation
+// constexpr-ly constructed from AST
+// Use lower_idx_in_trans to get the left most transition that originates from src state in the array
 template <int N_T, int N_FS>
 class finite_automata {
   private:
@@ -40,6 +43,14 @@ class finite_automata {
     constexpr finite_automata(array<transition, N_T> t, array<int, N_FS> fs)
         : transitions(t), final_states(fs) {
         this->sort();
+    }
+
+    constexpr int size_transition() const {
+        return N_T;
+    }
+
+    constexpr int size_final_state() const {
+        return N_FS;
     }
 
     // only use this when the object is default constructed
@@ -80,7 +91,7 @@ class finite_automata {
 
     // Since transitions are sorted, we can search for next
     // state from lower bound idx. Find that idx here.
-    constexpr int lower_idx_of_src(int src) const {
+    constexpr int lower_idx_in_trans(int src) const {
         int left = 0, right = N_T - 1;
         while (left <= right) {
             int         mid = (left + right) / 2;
@@ -98,7 +109,7 @@ class finite_automata {
                 right--;
             }
         }
-        return false;
+        return -1;
     }
 
     constexpr bool is_final_state(int fs) const {
@@ -141,6 +152,10 @@ static constexpr finite_automata<1, 1> FA_char{ { { { 0, 1, C } } }, { 1 } };
 //
 // FA connector
 //
+
+// Wraps connector funtions in a struct and store the result in a static member.
+// This forces compiler to compute the results in compile time.
+// It is also eaiser to implement variadic connector APIs for concat and alt using this method.
 
 template <auto& LHS, auto& RHS, auto&... FAs>
 struct FA_concat {

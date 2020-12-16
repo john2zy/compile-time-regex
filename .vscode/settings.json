@@ -51,6 +51,7 @@
         "string_view": "cpp",
         "iostream": "cpp",
         "ranges": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "stack": "cpp"
     }
 }

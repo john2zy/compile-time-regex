@@ -25,7 +25,7 @@ struct array {
         return &(_data[N]);
     }
 
-    // in ascending order
+    // returns a new constexpr array in ascending order
     template <typename CMP>
     constexpr auto sorted(CMP cmp) const {
         array<T, N> res = *this;
