@@ -45,6 +45,9 @@ class finite_automata {
         this->sort();
     }
 
+    constexpr finite_automata(const finite_automata<N_T, N_FS>& other)
+        : transitions(other.transitions), final_states(other.final_states), idx_t(other.idx_t), idx_fs(other.idx_fs) {}
+
     constexpr int size_transition() const {
         return N_T;
     }
